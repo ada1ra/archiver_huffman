@@ -1,0 +1,19 @@
+name: Tests
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential
+      - name: Create output directory
+        run: mkdir -p tests/output
+      - name: Compile tests
+        run: gcc -Wall -Wextra tests/tests.c src/huffman.c -o huffmanTests -I src/
+      - name: Run tests
+        run: ./huffmanTests
