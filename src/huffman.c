@@ -314,6 +314,24 @@ static Node* buildTreeFromFreqs(const uint64_t freqs[256], Node* leafNodes[256])
     return root;
 }
 
+// =============== Функция очистки ресурсов ===============
+
+static void freeResources(FILE** in, FILE** out, Node** root)
+{
+    if (in && *in) {
+        fclose(*in);
+        *in = NULL;
+    }
+    if (out && *out) {
+        fclose(*out);
+        *out = NULL;
+    }
+    if (root && *root) {
+        freeTree(*root);
+        *root = NULL;
+    }
+}
+
 /* =============== Функции для пользователя =============== */
 
 /*
@@ -326,12 +344,12 @@ int huffmanCompress(const char* inputPath, const char* outputPath)
     FILE* out = NULL;
     Node* root = NULL;
     Node* leafNodes[256] = { NULL };
-    int ret = -1;
 
     in = fopen(inputPath, "rb");
     if (!in) {
         fprintf(stderr, "Ошибка: не удалось открыть %s\n", inputPath);
-        goto cleanup;
+        freeResources(&in, &out, &root);
+        return -1;
     }
 
     uint64_t freqs[256] = { 0 };
@@ -351,7 +369,8 @@ int huffmanCompress(const char* inputPath, const char* outputPath)
 
     if (!out) {
         fprintf(stderr, "Ошибка: не удалось создать %s\n", outputPath);
-        goto cleanup;
+        freeResources(&in, &out, &root);
+        return -1;
     }
 
     // подсчёт ненулевых частот
@@ -374,15 +393,16 @@ int huffmanCompress(const char* inputPath, const char* outputPath)
 
     // если файл пуст, заголовок уже записан —> успех
     if (fileSize == 0) {
-        ret = 0;
-        goto cleanup;
+        freeResources(&in, &out, &root);
+        return 0;
     }
 
     // строим дерево Хаффмана
     root = buildTreeFromFreqs(freqs, leafNodes);
     if (!root) {
         fprintf(stderr, "Ошибка: не удалось построить дерево Хаффмана\n");
-        goto cleanup;
+        freeResources(&in, &out, &root);
+        return -1;
     }
 
     // инициализируем битовый писатель
@@ -394,8 +414,8 @@ int huffmanCompress(const char* inputPath, const char* outputPath)
         for (uint64_t i = 0; i < fileSize; ++i)
             bitWriterWriteBit(&bw, 0);
         bitWriterFlush(&bw);
-        ret = 0;
-        goto cleanup;
+        freeResources(&in, &out, &root);
+        return 0;
     }
 
     // возвращаемся в начало файла
@@ -408,13 +428,15 @@ int huffmanCompress(const char* inputPath, const char* outputPath)
         int byte = fgetc(in);
         if (byte == EOF) {
             fprintf(stderr, "Ошибка: преждевременный конец входного файла\n");
-            goto cleanup;
+            freeResources(&in, &out, &root);
+            return -1;
         }
 
         Node* leaf = leafNodes[byte];
         if (!leaf) {
             fprintf(stderr, "Ошибка: нет листа для байта 0x%02X\n", byte);
-            goto cleanup;
+            freeResources(&in, &out, &root);
+            return -1;
         }
 
         getCodeBits(leaf, bits, &bitLen);
@@ -422,16 +444,8 @@ int huffmanCompress(const char* inputPath, const char* outputPath)
             bitWriterWriteBit(&bw, bits[j]);
     }
     bitWriterFlush(&bw);
-    ret = 0;
-
-cleanup:
-    if (in)
-        fclose(in);
-    if (out)
-        fclose(out);
-    if (root)
-        freeTree(root);
-    return ret;
+    freeResources(&in, &out, &root);
+    return 0;
 }
 
 /*
@@ -443,12 +457,12 @@ int huffmanDecompress(const char* inputPath, const char* outputPath)
     FILE* in = NULL;
     FILE* out = NULL;
     Node* root = NULL;
-    int ret = -1;
 
     in = fopen(inputPath, "rb");
     if (!in) {
         fprintf(stderr, "Ошибка: не удалось открыть %s\n", inputPath);
-        goto cleanup;
+        freeResources(&in, &out, &root);
+        return -1;
     }
 
     // чтение заголовка
@@ -459,7 +473,8 @@ int huffmanDecompress(const char* inputPath, const char* outputPath)
         int byte = fgetc(in);
         if (byte == EOF) {
             fprintf(stderr, "Ошибка: неполный заголовок\n");
-            goto cleanup;
+            freeResources(&in, &out, &root);
+            return -1;
         }
         uint64_t freq = readUint64LE(in);
         freqs[(uint8_t)byte] = freq;
@@ -468,20 +483,22 @@ int huffmanDecompress(const char* inputPath, const char* outputPath)
     out = fopen(outputPath, "wb");
     if (!out) {
         fprintf(stderr, "Ошибка: не удалось создать %s\n", outputPath);
-        goto cleanup;
+        freeResources(&in, &out, &root);
+        return -1;
     }
 
     // если исходный файл был пуст, выходной тоже
     if (originalSize == 0) {
-        ret = 0;
-        goto cleanup;
+        freeResources(&in, &out, &root);
+        return 0;
     }
 
     // восстанавливаем дерево Хаффмана
     root = buildTreeFromFreqs(freqs, NULL);
     if (!root) {
         fprintf(stderr, "Ошибка: не удалось восстановить дерево Хаффмана\n");
-        goto cleanup;
+        freeResources(&in, &out, &root);
+        return -1;
     }
 
     // инициализируем битовый читатель
@@ -495,12 +512,13 @@ int huffmanDecompress(const char* inputPath, const char* outputPath)
             int bit = bitReaderReadBit(&br);
             if (bit == -1) {
                 fprintf(stderr, "Ошибка: неожиданный конец файла при разжатии\n");
-                goto cleanup;
+                freeResources(&in, &out, &root);
+                return -1;
             }
             fputc(sym, out);
         }
-        ret = 0;
-        goto cleanup;
+        freeResources(&in, &out, &root);
+        return 0;
     }
 
     // общий случай - декодируем биты до листа
@@ -508,32 +526,27 @@ int huffmanDecompress(const char* inputPath, const char* outputPath)
         Node* node = root;
         if (!node) {
             fprintf(stderr, "Ошибка: корень дерева NULL\n");
-            goto cleanup;
+            freeResources(&in, &out, &root);
+            return -1;
         }
         while (node->left || node->right) {
             int bit = bitReaderReadBit(&br);
             if (bit == -1) {
                 fprintf(stderr, "Ошибка: конец файла при разжатии\n");
-                goto cleanup;
+                freeResources(&in, &out, &root);
+                return -1;
             }
             Node* next = bit ? node->right : node->left;
             if (!next) {
                 fprintf(stderr, "Ошибка: некорректный битовый поток\n");
-                goto cleanup;
+                freeResources(&in, &out, &root);
+                return -1;
             }
             node = next;
         }
         fputc(node->byte, out);
     }
 
-    ret = 0;
-
-cleanup:
-    if (in)
-        fclose(in);
-    if (out)
-        fclose(out);
-    if (root)
-        freeTree(root);
-    return ret;
+    freeResources(&in, &out, &root);
+    return 0;
 }
