@@ -41,8 +41,15 @@ typedef struct {
 static MinHeap* heapCreate(int capacity)
 {
     MinHeap* heap = (MinHeap*)malloc(sizeof(MinHeap));
+    if (!heap)
+        return NULL;
 
     heap->arr = (Node**)malloc(sizeof(Node*) * capacity);
+    if (!heap->arr) {
+        free(heap);
+        return NULL;
+    }
+
     heap->size = 0;
     heap->capacity = capacity;
 
@@ -59,16 +66,16 @@ static void heapFree(MinHeap* heap)
 }
 
 // Добавление узла в кучу
-static void heapPush(MinHeap* heap, Node* node)
+static int heapPush(MinHeap* heap, Node* node)
 {
     // если массив заполнен, увеличиваем ёмкость вдвое
     if (heap->size >= heap->capacity) {
-        heap->capacity *= 2;
-        Node** newArr = (Node**)realloc(heap->arr, sizeof(Node*) * heap->capacity);
-        if (!newArr) {
-            return;
-        }
+        int newCapacity = heap->capacity * 2;
+        Node** newArr = (Node**)realloc(heap->arr, sizeof(Node*) * newCapacity);
+        if (!newArr)
+            return -1;
         heap->arr = newArr;
+        heap->capacity = newCapacity;
     }
 
     int i = heap->size++;
@@ -83,6 +90,7 @@ static void heapPush(MinHeap* heap, Node* node)
     }
 
     heap->arr[i] = node;
+    return 0;
 }
 
 // Извлечение минимального узла
@@ -268,14 +276,32 @@ static void getCodeBits(Node* leaf, uint8_t bits[256], int* len)
 static Node* buildTreeFromFreqs(const uint64_t freqs[256], Node* leafNodes[256])
 {
     MinHeap* heap = heapCreate(256);
+    if (!heap)
+        return NULL;
+    
     int nonZero = 0;
 
     for (int i = 0; i < 256; ++i) {
         if (freqs[i] > 0) {
             Node* node = (Node*)calloc(1, sizeof(Node));
+            if (!node) {
+                for (int k = 0; k < heap->size; ++k)
+                    freeTree(heap->arr[k]);
+                heapFree(heap);
+                return NULL;
+            }
+
             node->freq = freqs[i];
             node->byte = (uint8_t)i;
-            heapPush(heap, node);
+            
+            if (heapPush(heap, node) != 0) {
+                freeTree(node);
+                for (int k = 0; k < heap->size; ++k)
+                    freeTree(heap->arr[k]);
+                heapFree(heap);
+                return NULL;
+            }
+
             if (leafNodes)
                 leafNodes[i] = node;
             nonZero++;
@@ -299,6 +325,15 @@ static Node* buildTreeFromFreqs(const uint64_t freqs[256], Node* leafNodes[256])
         Node* left = heapPop(heap);
         Node* right = heapPop(heap);
         Node* parent = (Node*)calloc(1, sizeof(Node));
+        if (!parent) {
+            for (int k = 0; k < heap->size; ++k)
+                freeTree(heap->arr[k]);
+            freeTree(left);
+            freeTree(right);
+            heapFree(heap);
+            return NULL;
+        }
+
         parent->freq = left->freq + right->freq;
         parent->left = left;
         parent->right = right;
@@ -306,7 +341,13 @@ static Node* buildTreeFromFreqs(const uint64_t freqs[256], Node* leafNodes[256])
         right->parent = parent;
         left->isLeft = 1;
         right->isLeft = 0;
-        heapPush(heap, parent);
+        if (heapPush(heap, parent) != 0) {
+            freeTree(parent);
+            for (int k = 0; k < heap->size; ++k)
+                freeTree(heap->arr[k]);
+            heapFree(heap);
+            return NULL;
+        }
     }
 
     Node* root = heapPop(heap);
