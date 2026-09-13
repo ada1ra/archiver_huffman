@@ -9,7 +9,7 @@
 
 // Структура узла
 typedef struct Node {
-    uint64_t freq;
+    uint64_t frequency;
     uint8_t byte;
     struct Node* left;
     struct Node* right;
@@ -32,7 +32,7 @@ static void freeTree(Node* node)
 
 // Структура кучи
 typedef struct {
-    Node** arr;
+    Node** nodes;
     int size;
     int capacity;
 } MinHeap;
@@ -44,8 +44,8 @@ static MinHeap* heapCreate(int capacity)
     if (!heap)
         return NULL;
 
-    heap->arr = (Node**)malloc(sizeof(Node*) * capacity);
-    if (!heap->arr) {
+    heap->nodes = (Node**)malloc(sizeof(Node*) * capacity);
+    if (!heap->nodes) {
         free(heap);
         return NULL;
     }
@@ -60,7 +60,7 @@ static MinHeap* heapCreate(int capacity)
 static void heapFree(MinHeap* heap)
 {
     if (heap) {
-        free(heap->arr);
+        free(heap->nodes);
         free(heap);
     }
 }
@@ -71,10 +71,10 @@ static int heapPush(MinHeap* heap, Node* node)
     // если массив заполнен, увеличиваем ёмкость вдвое
     if (heap->size >= heap->capacity) {
         int newCapacity = heap->capacity * 2;
-        Node** newArr = (Node**)realloc(heap->arr, sizeof(Node*) * newCapacity);
+        Node** newArr = (Node**)realloc(heap->nodes, sizeof(Node*) * newCapacity);
         if (!newArr)
             return -1;
-        heap->arr = newArr;
+        heap->nodes = newArr;
         heap->capacity = newCapacity;
     }
 
@@ -83,13 +83,13 @@ static int heapPush(MinHeap* heap, Node* node)
     // поднимаем элемент вверх, пока не восстановим свойство кучи
     while (i > 0) {
         int parent = (i - 1) / 2;
-        if (heap->arr[parent]->freq <= node->freq)
+        if (heap->nodes[parent]->frequency <= node->frequency)
             break;
-        heap->arr[i] = heap->arr[parent];
+        heap->nodes[i] = heap->nodes[parent];
         i = parent;
     }
 
-    heap->arr[i] = node;
+    heap->nodes[i] = node;
     return 0;
 }
 
@@ -99,8 +99,8 @@ static Node* heapPop(MinHeap* heap)
     if (heap->size == 0)
         return NULL;
 
-    Node* top = heap->arr[0];
-    Node* last = heap->arr[--heap->size];
+    Node* top = heap->nodes[0];
+    Node* last = heap->nodes[--heap->size];
     int i = 0;
 
     // восстанавливаем свойство кучи
@@ -108,17 +108,17 @@ static Node* heapPop(MinHeap* heap)
         int left = 2 * i + 1;
         int right = 2 * i + 2;
         int smallest = i;
-        if (left < heap->size && heap->arr[left]->freq < heap->arr[smallest]->freq)
+        if (left < heap->size && heap->nodes[left]->frequency < heap->nodes[smallest]->frequency)
             smallest = left;
-        if (right < heap->size && heap->arr[right]->freq < heap->arr[smallest]->freq)
+        if (right < heap->size && heap->nodes[right]->frequency < heap->nodes[smallest]->frequency)
             smallest = right;
         if (smallest == i)
             break;
-        heap->arr[i] = heap->arr[smallest];
+        heap->nodes[i] = heap->nodes[smallest];
         i = smallest;
     }
 
-    heap->arr[i] = last;
+    heap->nodes[i] = last;
     return top;
 }
 
@@ -132,34 +132,34 @@ typedef struct {
 } BitWriter;
 
 // Инициализация битового писателя
-static void bitWriterInit(BitWriter* bw, FILE* file)
+static void bitWriterInit(BitWriter* bitWriter, FILE* file)
 {
-    bw->file = file;
-    bw->buffer = 0;
-    bw->bitsCount = 0;
+    bitWriter->file = file;
+    bitWriter->buffer = 0;
+    bitWriter->bitsCount = 0;
 }
 
 // Запись одного бита в накопитель
-static void bitWriterWriteBit(BitWriter* bw, int bit)
+static void bitWriterWriteBit(BitWriter* bitWriter, int bit)
 {
     if (bit)
-        bw->buffer |= (1 << (7 - bw->bitsCount));
+        bitWriter->buffer |= (1 << (7 - bitWriter->bitsCount));
 
-    bw->bitsCount++;
+    bitWriter->bitsCount++;
 
-    if (bw->bitsCount == 8) {
-        fwrite(&bw->buffer, 1, 1, bw->file);
+    if (bitWriter->bitsCount == 8) {
+        fwrite(&bitWriter->buffer, 1, 1, bitWriter->file);
 
-        bw->buffer = 0;
-        bw->bitsCount = 0;
+        bitWriter->buffer = 0;
+        bitWriter->bitsCount = 0;
     }
 }
 
 // Заполнение байта до конца
-static void bitWriterFlush(BitWriter* bw)
+static void bitWriterFlush(BitWriter* bitWriter)
 {
-    if (bw->bitsCount > 0)
-        fwrite(&bw->buffer, 1, 1, bw->file);
+    if (bitWriter->bitsCount > 0)
+        fwrite(&bitWriter->buffer, 1, 1, bitWriter->file);
 }
 
 /* =============== Битовый ввод =============== */
@@ -172,32 +172,32 @@ typedef struct {
 } BitReader;
 
 // Инициализация битового читателя
-static void bitReaderInit(BitReader* br, FILE* file)
+static void bitReaderInit(BitReader* bitReader, FILE* file)
 {
-    br->file = file;
-    br->buffer = 0;
-    br->bitsLeft = 0;
+    bitReader->file = file;
+    bitReader->buffer = 0;
+    bitReader->bitsLeft = 0;
 }
 
 // Чтение одного бита, возвращает бит или -1 при ошибке или конце файла
-static int bitReaderReadBit(BitReader* br)
+static int bitReaderReadBit(BitReader* bitReader)
 {
     // если в буфере нет непрочитанных битов, читаем новый байт
-    if (br->bitsLeft == 0) {
-        int c = fgetc(br->file);
+    if (bitReader->bitsLeft == 0) {
+        int c = fgetc(bitReader->file);
 
         if (c == EOF)
             return -1;
 
-        br->buffer = (uint8_t)c;
-        br->bitsLeft = 8;
+        bitReader->buffer = (uint8_t)c;
+        bitReader->bitsLeft = 8;
     }
     // извлекаем старший бит
-    int bit = (br->buffer >> 7) & 1;
+    int bit = (bitReader->buffer >> 7) & 1;
     // сдвигаем буфер влево, чтобы следующий бит стал старшим
-    br->buffer <<= 1;
+    bitReader->buffer <<= 1;
     // уменьшаем счётчик оставшихся битов
-    br->bitsLeft--;
+    bitReader->bitsLeft--;
 
     return bit;
 }
@@ -240,14 +240,14 @@ static void writeUint16LE(uint16_t value, FILE* file)
 // Чтение 16-битного беззнакового числа
 static uint16_t readUint16LE(FILE* file)
 {
-    int lo = fgetc(file);
-    int hi = fgetc(file);
+    int lowByte = fgetc(file);
+    int highByte = fgetc(file);
 
-    if (lo == EOF || hi == EOF)
+    if (lowByte == EOF || highByte == EOF)
         return 0;
 
     // собираем число из младшего и старшего байта
-    return (uint16_t)lo | ((uint16_t)hi << 8);
+    return (uint16_t)lowByte | ((uint16_t)highByte << 8);
 }
 
 /* =============== Преобразование листа в битовую последовательность =============== */
@@ -273,7 +273,7 @@ static void getCodeBits(Node* leaf, uint8_t bits[256], int* len)
 /* =============== Построение дерева Хаффмана =============== */
 
 // Построение дерева по таблице частот, leafNodes (если не NULL) заполняется указателями на листья
-static Node* buildTreeFromFreqs(const uint64_t freqs[256], Node* leafNodes[256])
+static Node* buildTreeFromFreqs(const uint64_t frequencies[256], Node* leafNodes[256])
 {
     MinHeap* heap = heapCreate(256);
     if (!heap)
@@ -282,22 +282,22 @@ static Node* buildTreeFromFreqs(const uint64_t freqs[256], Node* leafNodes[256])
     int nonZero = 0;
 
     for (int i = 0; i < 256; ++i) {
-        if (freqs[i] > 0) {
+        if (frequencies[i] > 0) {
             Node* node = (Node*)calloc(1, sizeof(Node));
             if (!node) {
                 for (int k = 0; k < heap->size; ++k)
-                    freeTree(heap->arr[k]);
+                    freeTree(heap->nodes[k]);
                 heapFree(heap);
                 return NULL;
             }
 
-            node->freq = freqs[i];
+            node->frequency = frequencies[i];
             node->byte = (uint8_t)i;
             
             if (heapPush(heap, node) != 0) {
                 freeTree(node);
                 for (int k = 0; k < heap->size; ++k)
-                    freeTree(heap->arr[k]);
+                    freeTree(heap->nodes[k]);
                 heapFree(heap);
                 return NULL;
             }
@@ -327,14 +327,14 @@ static Node* buildTreeFromFreqs(const uint64_t freqs[256], Node* leafNodes[256])
         Node* parent = (Node*)calloc(1, sizeof(Node));
         if (!parent) {
             for (int k = 0; k < heap->size; ++k)
-                freeTree(heap->arr[k]);
+                freeTree(heap->nodes[k]);
             freeTree(left);
             freeTree(right);
             heapFree(heap);
             return NULL;
         }
 
-        parent->freq = left->freq + right->freq;
+        parent->frequency = left->frequency + right->frequency;
         parent->left = left;
         parent->right = right;
         left->parent = parent;
@@ -344,7 +344,7 @@ static Node* buildTreeFromFreqs(const uint64_t freqs[256], Node* leafNodes[256])
         if (heapPush(heap, parent) != 0) {
             freeTree(parent);
             for (int k = 0; k < heap->size; ++k)
-                freeTree(heap->arr[k]);
+                freeTree(heap->nodes[k]);
             heapFree(heap);
             return NULL;
         }
@@ -393,13 +393,13 @@ int huffmanCompress(const char* inputPath, const char* outputPath)
         return -1;
     }
 
-    uint64_t freqs[256] = { 0 };
+    uint64_t frequencies[256] = { 0 };
     uint64_t fileSize = 0;
     int c = 0;
 
     // подсчёт частот
     while ((c = fgetc(in)) != EOF) {
-        freqs[(uint8_t)c]++;
+        frequencies[(uint8_t)c]++;
         fileSize++;
     }
 
@@ -417,7 +417,7 @@ int huffmanCompress(const char* inputPath, const char* outputPath)
     // подсчёт ненулевых частот
     uint16_t numNonzero = 0;
     for (int i = 0; i < 256; ++i)
-        if (freqs[i] > 0)
+        if (frequencies[i] > 0)
             numNonzero++;
 
     // запись заголовка (размер оригинала, количество символов)
@@ -426,9 +426,9 @@ int huffmanCompress(const char* inputPath, const char* outputPath)
 
     // запись только ненулевых (байт, частота)
     for (int i = 0; i < 256; ++i) {
-        if (freqs[i] > 0) {
+        if (frequencies[i] > 0) {
             fputc(i, out);
-            writeUint64LE(freqs[i], out);
+            writeUint64LE(frequencies[i], out);
         }
     }
 
@@ -439,7 +439,7 @@ int huffmanCompress(const char* inputPath, const char* outputPath)
     }
 
     // строим дерево Хаффмана
-    root = buildTreeFromFreqs(freqs, leafNodes);
+    root = buildTreeFromFreqs(frequencies, leafNodes);
     if (!root) {
         fprintf(stderr, "Ошибка: не удалось построить дерево Хаффмана\n");
         freeResources(&in, &out, &root);
@@ -447,14 +447,14 @@ int huffmanCompress(const char* inputPath, const char* outputPath)
     }
 
     // инициализируем битовый писатель
-    BitWriter bw;
-    bitWriterInit(&bw, out);
+    BitWriter bitWriter;
+    bitWriterInit(&bitWriter, out);
 
     // случай одного уникального символа
     if (root->left == NULL && root->right == NULL) {
         for (uint64_t i = 0; i < fileSize; ++i)
-            bitWriterWriteBit(&bw, 0);
-        bitWriterFlush(&bw);
+            bitWriterWriteBit(&bitWriter, 0);
+        bitWriterFlush(&bitWriter);
         freeResources(&in, &out, &root);
         return 0;
     }
@@ -482,9 +482,9 @@ int huffmanCompress(const char* inputPath, const char* outputPath)
 
         getCodeBits(leaf, bits, &bitLen);
         for (int j = 0; j < bitLen; ++j)
-            bitWriterWriteBit(&bw, bits[j]);
+            bitWriterWriteBit(&bitWriter, bits[j]);
     }
-    bitWriterFlush(&bw);
+    bitWriterFlush(&bitWriter);
     freeResources(&in, &out, &root);
     return 0;
 }
@@ -509,7 +509,7 @@ int huffmanDecompress(const char* inputPath, const char* outputPath)
     // чтение заголовка
     uint64_t originalSize = readUint64LE(in);
     uint16_t numNonzero = readUint16LE(in);
-    uint64_t freqs[256] = { 0 };
+    uint64_t frequencies[256] = { 0 };
     for (uint16_t i = 0; i < numNonzero; ++i) {
         int byte = fgetc(in);
         if (byte == EOF) {
@@ -517,8 +517,8 @@ int huffmanDecompress(const char* inputPath, const char* outputPath)
             freeResources(&in, &out, &root);
             return -1;
         }
-        uint64_t freq = readUint64LE(in);
-        freqs[(uint8_t)byte] = freq;
+        uint64_t frequency = readUint64LE(in);
+        frequencies[(uint8_t)byte] = frequency;
     }
 
     out = fopen(outputPath, "wb");
@@ -535,7 +535,7 @@ int huffmanDecompress(const char* inputPath, const char* outputPath)
     }
 
     // восстанавливаем дерево Хаффмана
-    root = buildTreeFromFreqs(freqs, NULL);
+    root = buildTreeFromFreqs(frequencies, NULL);
     if (!root) {
         fprintf(stderr, "Ошибка: не удалось восстановить дерево Хаффмана\n");
         freeResources(&in, &out, &root);
@@ -543,14 +543,14 @@ int huffmanDecompress(const char* inputPath, const char* outputPath)
     }
 
     // инициализируем битовый читатель
-    BitReader br;
-    bitReaderInit(&br, in);
+    BitReader bitReader;
+    bitReaderInit(&bitReader, in);
 
     // случай одного уникального символа
     if (root->left == NULL && root->right == NULL) {
         uint8_t sym = root->byte;
         for (uint64_t i = 0; i < originalSize; ++i) {
-            int bit = bitReaderReadBit(&br);
+            int bit = bitReaderReadBit(&bitReader);
             if (bit == -1) {
                 fprintf(stderr, "Ошибка: неожиданный конец файла при разжатии\n");
                 freeResources(&in, &out, &root);
@@ -571,7 +571,7 @@ int huffmanDecompress(const char* inputPath, const char* outputPath)
             return -1;
         }
         while (node->left || node->right) {
-            int bit = bitReaderReadBit(&br);
+            int bit = bitReaderReadBit(&bitReader);
             if (bit == -1) {
                 fprintf(stderr, "Ошибка: конец файла при разжатии\n");
                 freeResources(&in, &out, &root);
