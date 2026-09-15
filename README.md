@@ -26,20 +26,46 @@
 - Модульная структура: `huffman.h`, `huffman.c`, `main.c`
 - Интерфейс командной строки
 
-### Сборка и запуск
+### Сборка и запуск на Linux
 ```bash
-# Компиляция
-gcc -O2 -Wall -Wextra -o huffman main.c huffman.c
+# Конфигурация и сборка
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
 # Сжатие файла input.txt
-./huffman -c input.txt compressed.bin
+./build/src/huffman -c input.txt compressed.bin
 # Разжатие файла
-./huffman -d compressed.bin output.txt
+./build/src/huffman -d compressed.bin output.txt
+```
+
+### Сборка и запуск на Windows
+```bash
+# Конфигурация и сборка
+cmake -B build
+cmake --build build --config Release
+# Сжатие файла input.txt
+.\build\Release\huffman.exe -c input.txt compressed.bin
+# Разжатие файла
+.\build\Release\huffman.exe -d compressed.bin output.txt
+```
+
+### Сборка и запуск тестов
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Debug
+cmake --build build --target run_tests
+ctest --test-dir build --output-on-failure
 ```
 
 ### Технологический стек
-- C
-- GCC
-- Базовые библиотеки: stdio, stdlib, stdint, string
+- C (стандарт C99 и новее)
+- CMake ≥ 3.28
+- Компилятор: GCC ≥ 9, Clang ≥ 10 или MSVC ≥ 2019
+- Базовые библиотеки: stdio, stdlib, stdint, string, stdbool
+
+### CI
+Проект проверяется на Linux и Windows:
+- сборка через CMake
+- проверка через clang-format и clang-tidy
+- тесты через CTest
 
 ### Лицензия
-- Выбрана лицензия GPL-3.0 license
+- Выбрана лицензия GPL-3.0
