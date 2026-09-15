@@ -7,4 +7,6 @@ target_link_libraries(run_tests PRIVATE huffman_lib)
 # Указание заголовочного файла
 target_include_directories(run_tests PUBLIC ${CMAKE_CURRENT_SOURCE_DIR/src})
 
-add_test(NAME huffman_tests COMMAND run_tests)
+add_test(NAME huffman_tests
+         $<TARGET_FILE:run_tests>
+         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
