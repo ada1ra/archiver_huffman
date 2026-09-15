@@ -20,8 +20,7 @@ jobs:
         run: cmake -B build -DCMAKE_BUILD_TYPE=Debug
       
       - name: Build tests
-        run: cmake --build build --target run_tests
+        run: cmake --build build --target run_huffman_tests
       
       - name: Run tests
-        run: ./build/tests/run_tests
-        
+        run: ./build/tests/run_huffman_tests
