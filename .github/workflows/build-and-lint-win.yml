@@ -23,7 +23,10 @@ jobs:
           find . -path ./build -prune -o -type f -name '*.[ch]' -print | xargs clang-format --style=file --dry-run -Werror
 
       - name: Configure
-        run: cmake -B build -G Ninja -T ClangCL -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        run: cmake -B build -G Ninja `
+          -DCMAKE_C_COMPILER=clang-cl `
+          -DCMAKE_CXX_COMPILER=clang-cl `
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       - name: Build
         run: cmake --build build --config Debug
