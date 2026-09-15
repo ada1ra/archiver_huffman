@@ -278,7 +278,7 @@ static Node* buildTreeFromFreqs(const uint64_t frequencies[256], Node* leafNodes
     MinHeap* heap = heapCreate(256);
     if (!heap)
         return NULL;
-    
+
     int nonZero = 0;
 
     for (int i = 0; i < 256; ++i) {
@@ -293,7 +293,7 @@ static Node* buildTreeFromFreqs(const uint64_t frequencies[256], Node* leafNodes
 
             node->frequency = frequencies[i];
             node->byte = (uint8_t)i;
-            
+
             if (heapPush(heap, node) != 0) {
                 freeTree(node);
                 for (int k = 0; k < heap->size; ++k)
