@@ -8,3 +8,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 add_subdirectory(src)
 add_subdirectory(tests)
+
+if(MSVC)
+    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+endif()

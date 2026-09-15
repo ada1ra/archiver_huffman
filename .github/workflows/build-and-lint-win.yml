@@ -23,7 +23,7 @@ jobs:
           find . -path ./build -prune -o -type f -name '*.[ch]' -print | xargs clang-format --style=file --dry-run -Werror
 
       - name: Configure
-        run: cmake -B build -T ClangCL -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        run: cmake -B build -G Ninja -T ClangCL -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       - name: Build
         run: cmake --build build --config Debug
@@ -32,4 +32,3 @@ jobs:
         shell: bash
         run: |
           find src tests -type f -name '*.c' -print | xargs clang-tidy -p build
-          
