@@ -1,0 +1,35 @@
+name: Build and lint (Windows)
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  build-and-lint:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LLVM
+        run: choco install llvm --yes
+
+      - name: Add LLVM to PATH
+        run: |
+          "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Check format
+        shell: bash
+        run: |
+          find . -path ./build -prune -o -type f -name '*.[ch]' -print | xargs clang-format --style=file --dry-run -Werror
+
+      - name: Configure
+        run: cmake -B build -T ClangCL -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Build
+        run: cmake --build build --config Debug
+
+      - name: Lint
+        shell: bash
+        run: |
+          find src tests -type f -name '*.c' -print | xargs clang-tidy -p build
+          
