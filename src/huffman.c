@@ -107,13 +107,16 @@ static Node* heapPop(MinHeap* heap)
     while (true) {
         int left = 2 * i + 1;
         int right = 2 * i + 2;
-        int smallest = i;
-        if (left < heap->size && heap->nodes[left]->frequency < heap->nodes[smallest]->frequency)
-            smallest = left;
-        if (right < heap->size && heap->nodes[right]->frequency < heap->nodes[smallest]->frequency)
-            smallest = right;
-        if (smallest == i)
+
+        if (left >= heap->size)
             break;
+
+        int smallest = left;
+        if (right < heap->size && heap->nodes[right]->frequency < heap->nodes[left]->frequency)
+            smallest = right;
+        if (last->frequency <= heap->nodes[smallest]->frequency)
+            break;
+
         heap->nodes[i] = heap->nodes[smallest];
         i = smallest;
     }
