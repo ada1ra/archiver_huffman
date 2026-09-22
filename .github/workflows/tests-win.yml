@@ -1,0 +1,23 @@
+name: Tests (Windows)
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  run-tests:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create output directory
+        run: mkdir -Force tests/output
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build tests
+        run: cmake --build build --config Debug --target run_huffman_tests
+
+      - name: Run tests
+        run: ctest --test-dir build -C Debug --output-on-failure
