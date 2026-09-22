@@ -1,6 +1,9 @@
 # archiver_huffman
 Репозиторий для выполнения задания "Архиватор на базе алгоритма Хаффмана" по учебной практике.
 
+![Build and lint](https://github.com/ada1ra/archiver_huffman/actions/workflows/build-and-lint.yml/badge.svg)
+![Tests](https://github.com/ada1ra/archiver_huffman/actions/workflows/tests.yml/badge.svg)
+
 ### Научный руководитель
 - Юрий Викторович Литвинов — кандидат технических наук, доцент кафедры системного программирования математико-механического факультета СПбГУ 
 
