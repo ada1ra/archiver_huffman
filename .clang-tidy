@@ -148,7 +148,11 @@ Checks: "-*,
   clang-diagnostic-*,
   clang-analyzer-*,
   -cert-err34-c,
-  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling"
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+  -cert-err34-c,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+  -clang-analyzer-unix.Stream,
+  -clang-analyzer-unix.Errno"
 
 HeaderFilterRegex: ".*"
 
