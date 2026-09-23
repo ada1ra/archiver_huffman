@@ -8,7 +8,7 @@ jobs:
   run-tests:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Create output directory
         run: mkdir -Force tests/output
